@@ -1,19 +1,19 @@
 
 #include <SoftwareSerial.h>
 // IMPORT ALL REQUIRED LIBRARIES
-
+#include <ArduinoJson.h>
 #include <math.h>
    
 //**********ENTER IP ADDRESS OF SERVER******************//
 
-#define HOST_IP     "localhost"       // REPLACE WITH IP ADDRESS OF SERVER ( IP ADDRESS OF COMPUTER THE BACKEND IS RUNNING ON) 
+#define HOST_IP     "172.16.192.70"       // REPLACE WITH IP ADDRESS OF SERVER ( IP ADDRESS OF COMPUTER THE BACKEND IS RUNNING ON) 
 #define HOST_PORT   "8080"            // REPLACE WITH SERVER PORT (BACKEND FLASK API PORT)
 #define route       "api/update"      // LEAVE UNCHANGED 
-#define idNumber    "620012345"       // REPLACE WITH YOUR ID NUMBER 
+#define idNumber    "620161521"       // REPLACE WITH YOUR ID NUMBER 
 
 // WIFI CREDENTIALS
-#define SSID        "YOUR WIFI"      // "REPLACE WITH YOUR WIFI's SSID"   
-#define password    "YOUR PASSWORD"  // "REPLACE WITH YOUR WiFi's PASSWORD" 
+#define SSID        "MonaConnect"      // "REPLACE WITH YOUR WIFI's SSID"   
+#define password    ""  // "REPLACE WITH YOUR WiFi's PASSWORD" 
 
 #define stay        100
  
@@ -23,11 +23,15 @@
 #define espRX         10
 #define espTX         11
 #define espTimeout_ms 300
-
+#define TRIG 9
+#define ECHO 12
  
  
 /* Declare your functions below */
- 
+double getRadar();
+double getWaterHeight(double radar);
+double getReserve(double radar);
+double getPer(double waterHeight,double max); 
  
 
 SoftwareSerial esp(espRX, espTX); 
@@ -37,7 +41,8 @@ void setup(){
 
   Serial.begin(115200); 
   // Configure GPIO pins here
-
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
  
 
   espInit();  
@@ -45,7 +50,27 @@ void setup(){
 }
 
 void loop(){ 
-   
+  double radar, waterHeight, max, gal; 
+  digitalWrite(TRIG,LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG,LOW);
+
+  radar = getRadar();
+  waterHeight = getWaterHeight(radar);
+  max = 77.763;
+
+  JsonDocument doc;
+  char message[1100] = {0};
+  doc["id"] = "620161521";
+  doc["type"] = "ultrasonic";
+  doc["radar"] = radar;
+  doc["waterheight"] = waterHeight;
+  doc["reserve"] = getReserve(radar);
+  doc["percentage"] = getPer(waterHeight,max);
+
+  espUpdate(serializeJson(doc,message));
   // send updates with schema ‘{"id": "student_id", "type": "ultrasonic", "radar": 0, "waterheight": 0, "reserve": 0, "percentage": 0}’
 
 
@@ -105,5 +130,20 @@ void espInit(){
 }
 
 //***** Design and implement all util functions below ******
- 
+double getRadar(){
+  return ((pulseIn(ECHO,HIGH) * 0.343) /2)/2.54; //read value from sensor and convert to inches
+}
+
+double getWaterHeight(double radar){
+  return radar - 94.5;
+}
+
+double getReserve(double radar){
+  double gal = 77.763/1000;
+  return gal * radar;
+}
+
+double getPer(double waterHeight, double max){
+  return (waterHeight/max)*100;
+}
 

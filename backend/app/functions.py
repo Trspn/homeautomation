@@ -52,19 +52,75 @@ class DB:
     ####################
     
     # 1. CREATE FUNCTION TO INSERT DATA IN TO THE RADAR COLLECTION
-
+    def insertRadarData(self,data):
+        try:
+            remotedb 	= self.remoteMongo('mongodb://%s:%s@%s:%s' % (self.username, self.password,self.server,self.port), tls=self.tls)
+            result      = remotedb.ELET2415.radar.insert_one(data)
+        except Exception as e:
+            msg = str(e)
+            if "duplicate" not in msg:
+                print("insertRadarData error ",msg)
+            return False
+        else:                  
+            return True
+    
     
     # 2. CREATE FUNCTION TO RETRIEVE ALL DOCUMENTS FROM RADAR COLLECT BETWEEN SPECIFIED DATE RANGE. MUST RETURN A LIST OF DOCUMENTS
-
+    def get_reserved(self,start, end):
+            try:
+                start = int(start)
+                end = int(end)
+                remotedb 	= self.remoteMongo('mongodb://%s:%s@%s:%s' % (self.username, self.password,self.server,self.port), tls=self.tls)
+                result      = list(remotedb.ELET2415.radar.find({'timestamp': {'$gte': start, '$lte': end}},{"_id":0}))
+            except Exception as e:
+                msg = str(e)
+                print("get_reserved error ",msg)            
+            else:                  
+                return result
 
     # 3. CREATE A FUNCTION TO COMPUTE THE ARITHMETIC AVERAGE ON THE 'reserve' FEILED/VARIABLE, USING ALL DOCUMENTS FOUND BETWEEN SPECIFIED START AND END TIMESTAMPS. RETURNS A LIST WITH A SINGLE OBJECT INSIDE
-    
+    def get_avg(self,start,end):
+        try:
+            start = int(start)
+            end = int(end)
+            remotedb 	= self.remoteMongo('mongodb://%s:%s@%s:%s' % (self.username, self.password,self.server,self.port), tls=self.tls)
+            result      = list(remotedb.ELET2415.radar.aggregate([ { '$match': { 'timestamp': { '$gte': start, '$lte': end } } }, { '$group': { '_id': None, 'average': { '$avg': '$reserve' } } }, { '$project': { '_id': 0 } } ]))
+        except Exception as e:
+            msg = str(e)
+            print("get_avg error ",msg)            
+        else:                  
+            return result
     
     # 4. CREATE A FUNCTION THAT INSERT/UPDATE A SINGLE DOCUMENT IN THE 'code' COLLECTION WITH THE PROVIDED PASSCODE
-   
+    def setPasscode(self,code):
+        try:
+            remotedb 	= self.remoteMongo('mongodb://%s:%s@%s:%s' % (self.username, self.password,self.server,self.port), tls=self.tls)
+            result = remotedb.ELET2415.code.find_one_and_update(
+                {"type":"passcode"},
+                {'$set': {"type":"passcode","code":code}},
+                projection= {'_id':0},
+                upsert=True)
+                
+        except Exception as e:
+            msg = str(e)
+            print("setPasscode error ",msg)      
+            return result  
     
     # 5. CREATE A FUNCTION THAT RETURNS A COUNT, OF THE NUMBER OF DOCUMENTS FOUND IN THE 'code' COLLECTION WHERE THE 'code' FEILD EQUALS TO THE PROVIDED PASSCODE.
     #    REMEMBER, THE SCHEMA FOR THE SINGLE DOCUMENT IN THE 'code' COLLECTION IS {"type":"passcode","code":"0070"}
+    def checkPasscode(self,passcode):
+        remotedb= self.remoteMongo('mongodb://%s:%s@%s:%s' % (self.username, self.password,self.server,self.port), tls=self.tls)
+        try:
+            # Check if there is a document with the provided passcode
+            passcode = str(passcode)
+            count = remotedb.ELET2415.code.count_documents({'code': passcode})
+        except Exception as e:
+            msg = str(e)    
+            if count > 0:
+                 print("checkPasscode ",msg)    
+            return True
+        else:
+            return False
 
 
    

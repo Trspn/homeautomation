@@ -25,19 +25,87 @@ from math import floor
 #   Routing for your application    #
 #####################################
 
+# 1. Route to set a passcode combination
+@app.route('/api/set/combination', methods=['POST'])
+def set_combination():
+    '''Sets or updates the passcode in the code collection'''
+    if request.method == 'POST':
+        data = request.form.get('passcode')  # Expecting 'passcode=1234' from ESP32
+        if not data:
+            return jsonify({"status": "error", "message": "No passcode provided"}), 400
+        
+        result = mongo.setPasscode(data)
+        if result:
+            return jsonify({"status": "success", "data": dumps(result)}), 200
+        return jsonify({"status": "error", "message": "Failed to set passcode"}), 500
 
-# 1. CREATE ROUTE FOR '/api/set/combination'
-    
-# 2. CREATE ROUTE FOR '/api/check/combination'
+# 2. Route to check a passcode combination
+@app.route('/api/check/combination', methods=['POST'])
+def check_combination():
+    '''Checks if the provided passcode exists in the code collection'''
+    if request.method == 'POST':
+        data = request.form.get('passcode')  # Expecting 'passcode=1234' from ESP32
+        if not data:
+            return jsonify({"status": "error", "message": "No passcode provided"}), 400
+        
+        count = mongo.checkPasscode(data)
+        if count > 0:
+            return jsonify({"status": "complete", "data": "complete"}), 200
+        return jsonify({"status": "failed", "data": "failed"}), 401
 
-# 3. CREATE ROUTE FOR '/api/update'
-   
-# 4. CREATE ROUTE FOR '/api/reserve/<start>/<end>'
+# 3. Route to update radar data
+@app.route('/api/update', methods=['POST'])
+def update_radar():
+    '''Inserts new radar data into the radar collection'''
+    if request.method == 'POST':
+        data = request.get_json()  # Expecting JSON payload
+        if not data:
+            return jsonify({"status": "error", "message": "No data provided"}), 400
+        
+        # Add timestamp if not provided
+        if 'timestamp' not in data:
+            data['timestamp'] = int(time())
+        
+        result = mongo.insertRadarData(data)
+        if result:
+            return jsonify({"status": "success", "data": str(result)}), 200
+        return jsonify({"status": "error", "message": "Failed to insert data"}), 500
 
-# 5. CREATE ROUTE FOR '/api/avg/<start>/<end>'
+# 4. Route to retrieve reserve data between timestamps
+@app.route('/api/reserve/<start>/<end>', methods=['GET'])
+def get_reserve(start, end):
+    '''Retrieves all radar documents between start and end timestamps'''
+    if request.method == 'GET':
+        try:
+            start_ts = int(start)
+            end_ts = int(end)
+            if start_ts > end_ts:
+                return jsonify({"status": "error", "message": "Start timestamp must be less than end"}), 400
+            
+            result = mongo.get_reserved(start_ts, end_ts)
+            return jsonify({"status": "success", "data": result}), 200
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid timestamp format"}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
 
-
-   
+# 5. Route to compute average reserve between timestamps
+@app.route('/api/avg/<start>/<end>', methods=['GET'])
+def get_average_reserve(start, end):
+    '''Computes the average reserve value between start and end timestamps'''
+    if request.method == 'GET':
+        try:
+            start_ts = int(start)
+            end_ts = int(end)
+            if start_ts > end_ts:
+                return jsonify({"status": "error", "message": "Start timestamp must be less than end"}), 400
+            
+            result = mongo.get_avg(start_ts, end_ts)
+            return jsonify({"status": "success", "data": result}), 200
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid timestamp format"}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
 
 
 

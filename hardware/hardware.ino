@@ -412,20 +412,20 @@ void showLockState(void){
 
     if(lockState == true){
       tft.drawRGBBitmap(68,10, lockopen, 104, 97); 
-      tft.setCursor(50, 200);  
+      tft.setCursor(5, 200);  
       tft.setTextColor(ILI9341_WHITE); 
       tft.printf("Access Denied"); 
-      tft.setCursor(50, 200);  
+      tft.setCursor(5, 200);  
       tft.setTextColor(ILI9341_GREEN); 
       tft.printf("Access Granted");
       
     }
     else {
       tft.drawRGBBitmap(68,10, lockclose, 104, 103); 
-      tft.setCursor(50, 200);  
+      tft.setCursor(5, 200);  
       tft.setTextColor(ILI9341_WHITE); 
       tft.printf("Access Granted"); 
-      tft.setCursor(50, 200);  
+      tft.setCursor(5, 200);  
       tft.setTextColor(ILI9341_RED); 
       tft.printf("Access Denied"); 
     }
